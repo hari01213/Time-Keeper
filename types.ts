@@ -2,7 +2,14 @@
 export enum WorkType {
   NORMAL = 'Normal',
   PUBLIC_HOLIDAY = 'Public Holiday',
-  LEAVE = 'Leave'
+  LEAVE = 'Leave',
+  SATURDAY = 'Saturday',
+  SUNDAY = 'Sunday'
+}
+
+export enum EmploymentType {
+  REGULAR = 'Regular',
+  CASUAL = 'Casual'
 }
 
 export interface TimesheetEntry {
@@ -13,6 +20,8 @@ export interface TimesheetEntry {
   breakMinutes: number;
   type: WorkType;
   workedHours: number;
+  hourlyRateAtTime: number; // The specific rate (with multipliers) for this entry
+  totalEarned: number; // workedHours * hourlyRateAtTime
 }
 
 export interface PayRecord {
@@ -24,10 +33,16 @@ export interface PayRecord {
 }
 
 export interface Settings {
+  employmentType: EmploymentType;
   standardDailyHours: number;
   defaultBreak: number;
+  basePayRate: number;
+  casualLoadingMultiplier: number; // e.g. 1.25
+  multiplierSaturday: number;
+  multiplierSunday: number;
+  multiplierPublicHoliday: number;
   publicHolidayHours: number;
-  fortnightAnchorDate: string; // The start of some pay period to calculate others
+  fortnightAnchorDate: string;
 }
 
-export type TabType = 'timesheet' | 'pay' | 'summary' | 'settings';
+export type TabType = 'timesheet' | 'payroll' | 'settings';

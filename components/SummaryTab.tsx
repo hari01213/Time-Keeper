@@ -1,10 +1,9 @@
 
 import React from 'react';
-import { TrendingUp, TrendingDown, Info, Calendar as CalendarIcon, Clock } from 'lucide-react';
+import { TrendingUp, TrendingDown, Info, Calendar as CalendarIcon, DollarSign, ReceiptText } from 'lucide-react';
 import { format, isWithinInterval } from 'date-fns';
-import { TimesheetEntry, PayRecord, Settings } from '../types';
-import { formatDecimalHours } from '../utils/helpers';
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
+import { TimesheetEntry, PayRecord, Settings, EmploymentType } from '../types';
+import { formatDecimalHours, parseLocalISO, formatCurrency, calculateTax } from '../utils/helpers';
 
 interface Props {
   entries: TimesheetEntry[];
@@ -14,151 +13,152 @@ interface Props {
 }
 
 const SummaryTab: React.FC<Props> = ({ entries, payRecords, settings, currentTIL }) => {
+  const latestPay = payRecords[0];
   
-  // Helper for local-safe parsing of YYYY-MM-DD strings
-  const parseLocalISO = (s: string) => {
-    const [y, m, d] = s.split('-').map(Number);
-    return new Date(y, m - 1, d);
-  };
+  const entriesInLatestPeriod = latestPay ? entries.filter(e => 
+    isWithinInterval(parseLocalISO(e.date), {
+      start: parseLocalISO(latestPay.startDate),
+      end: parseLocalISO(latestPay.endDate)
+    })
+  ) : [];
 
-  // Group worked hours by pay periods
-  const periodData = payRecords.slice(0, 6).reverse().map(pay => {
-    const workedInPeriod = entries.filter(e => 
-      isWithinInterval(parseLocalISO(e.date), {
-        start: parseLocalISO(pay.startDate),
-        end: parseLocalISO(pay.endDate)
-      })
-    ).reduce((sum, e) => sum + e.workedHours, 0);
-
-    return {
-      name: format(parseLocalISO(pay.startDate), 'MMM d'),
-      worked: workedInPeriod,
-      paid: pay.hoursPaid,
-      til: workedInPeriod - pay.hoursPaid
-    };
-  });
+  const grossPay = entriesInLatestPeriod.reduce((sum, e) => sum + e.totalEarned, 0);
+  const totalHoursWorked = entriesInLatestPeriod.reduce((sum, e) => sum + e.workedHours, 0);
+  const tax = calculateTax(grossPay);
+  const netPay = grossPay - tax;
 
   return (
     <div className="space-y-8 pb-12">
-      {/* Hero Stats */}
+      {/* Financial Overview Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 md:col-span-2">
-          <div className="flex justify-between items-start mb-4">
+          <div className="flex justify-between items-start mb-6">
             <div>
-              <p className="text-slate-500 text-sm font-medium">Time In Lieu Balance</p>
-              <h3 className={`text-4xl font-black mt-1 ${
-                currentTIL >= 0 ? 'text-emerald-600' : 'text-rose-600'
-              }`}>
-                {currentTIL > 0 ? '+' : ''}{currentTIL.toFixed(2)} <span className="text-xl font-bold uppercase">Hours</span>
+              <p className="text-slate-500 text-sm font-medium">Estimated Net Pay (Current Period)</p>
+              <h3 className="text-4xl font-black text-slate-900 mt-1">
+                {formatCurrency(netPay)}
               </h3>
+              <p className="text-slate-400 text-xs mt-1">
+                Based on {totalHoursWorked.toFixed(1)} hours logged
+              </p>
             </div>
-            <div className={`p-3 rounded-xl ${
-              currentTIL >= 0 ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'
-            }`}>
-              {currentTIL >= 0 ? <TrendingUp size={28} /> : <TrendingDown size={28} />}
+            <div className="p-3 bg-emerald-50 text-emerald-600 rounded-xl">
+              <DollarSign size={28} />
             </div>
           </div>
-          <div className="flex gap-4 items-center">
-            <div className="flex-1 bg-slate-50 p-3 rounded-xl">
-              <p className="text-slate-400 text-[10px] font-bold uppercase tracking-wider">Total Worked</p>
-              <p className="text-lg font-bold text-slate-700">
-                {formatDecimalHours(entries.reduce((s, e) => s + e.workedHours, 0))}
+          
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            <div className="bg-slate-50 p-3 rounded-xl">
+              <p className="text-slate-400 text-[9px] font-bold uppercase tracking-wider">Gross</p>
+              <p className="text-sm font-bold text-slate-700">{formatCurrency(grossPay)}</p>
+            </div>
+            <div className="bg-slate-50 p-3 rounded-xl">
+              <p className="text-slate-400 text-[9px] font-bold uppercase tracking-wider">Tax (Est)</p>
+              <p className="text-sm font-bold text-rose-500">-{formatCurrency(tax)}</p>
+            </div>
+            <div className="bg-slate-50 p-3 rounded-xl">
+              <p className="text-slate-400 text-[9px] font-bold uppercase tracking-wider">TIL Balance</p>
+              <p className={`text-sm font-bold ${currentTIL >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
+                {currentTIL.toFixed(1)}h
               </p>
             </div>
-            <div className="flex-1 bg-slate-50 p-3 rounded-xl">
-              <p className="text-slate-400 text-[10px] font-bold uppercase tracking-wider">Total Paid</p>
-              <p className="text-lg font-bold text-slate-700">
-                {formatDecimalHours(payRecords.reduce((s, p) => s + p.hoursPaid, 0))}
-              </p>
+            <div className="bg-slate-50 p-3 rounded-xl">
+              <p className="text-slate-400 text-[9px] font-bold uppercase tracking-wider">Emp Type</p>
+              <p className="text-sm font-bold text-indigo-600">{settings.employmentType}</p>
             </div>
           </div>
         </div>
 
-        <div className="bg-gradient-to-br from-indigo-600 to-violet-700 p-6 rounded-2xl shadow-lg text-white">
+        <div className="bg-indigo-600 p-6 rounded-2xl shadow-lg text-white">
           <div className="flex items-center gap-2 mb-4 opacity-80">
             <Info size={16} />
-            <p className="text-xs font-bold uppercase">Quick Tip</p>
+            <p className="text-xs font-bold uppercase">TIL Status</p>
           </div>
           <p className="text-sm leading-relaxed mb-4">
-            You have {currentTIL > 0 ? 'extra' : 'fewer'} hours compared to your pay checks. 
-            {currentTIL > 0 
-              ? ` That's almost ${Math.floor(currentTIL / settings.standardDailyHours)} full days of leave available!` 
-              : " Log your overtime or check if you missed a pay record entry."}
+            {currentTIL >= 0 
+              ? `You've banked ${currentTIL.toFixed(1)} hours of TIL. That's worth approximately ${formatCurrency(currentTIL * settings.basePayRate)}!`
+              : `You are behind by ${Math.abs(currentTIL).toFixed(1)} hours based on your paid cycles.`
+            }
           </p>
-          <div className="h-1 w-full bg-white/20 rounded-full overflow-hidden">
-            <div 
-              className="h-full bg-white" 
-              style={{ width: `${Math.min(100, (currentTIL / (settings.standardDailyHours * 5)) * 100)}%` }} 
-            />
+          <div className="flex items-center gap-2 mt-auto">
+             <div className={`p-2 rounded-lg bg-white/20`}>
+                {currentTIL >= 0 ? <TrendingUp size={20}/> : <TrendingDown size={20}/>}
+             </div>
+             <span className="text-xs font-bold uppercase tracking-widest">
+                {currentTIL >= 0 ? 'Surplus' : 'Deficit'}
+             </span>
           </div>
         </div>
       </div>
 
-      {/* Charts */}
-      {periodData.length > 0 && (
-        <div className="bg-white p-6 rounded-2xl border shadow-sm">
-          <div className="flex justify-between items-center mb-6">
-            <h4 className="font-bold text-slate-800">Recent Pay Cycles</h4>
-            <div className="flex items-center gap-4 text-xs">
-              <div className="flex items-center gap-1.5"><div className="w-3 h-3 bg-indigo-500 rounded-sm"></div> Worked</div>
-              <div className="flex items-center gap-1.5"><div className="w-3 h-3 bg-slate-300 rounded-sm"></div> Paid</div>
+      {/* Payslip Report */}
+      <div className="bg-white rounded-2xl border shadow-sm overflow-hidden">
+        <div className="p-6 border-b bg-slate-50 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+             <ReceiptText className="text-indigo-600" />
+             <h4 className="font-bold text-slate-800 uppercase tracking-tight">Period Earnings Report</h4>
+          </div>
+          {latestPay && (
+            <div className="text-right">
+              <p className="text-xs font-bold text-slate-400">CURRENT PERIOD</p>
+              <p className="text-xs font-medium text-slate-600">{format(parseLocalISO(latestPay.startDate), 'MMM d')} - {format(parseLocalISO(latestPay.endDate), 'MMM d, yyyy')}</p>
             </div>
-          </div>
-          <div className="h-[250px] w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={periodData}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fontSize: 12, fill: '#94a3b8'}} />
-                <YAxis axisLine={false} tickLine={false} tick={{fontSize: 12, fill: '#94a3b8'}} />
-                <Tooltip 
-                  cursor={{fill: '#f8fafc'}}
-                  contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
-                />
-                <Bar dataKey="worked" fill="#6366f1" radius={[4, 4, 0, 0]} barSize={32} />
-                <Bar dataKey="paid" fill="#cbd5e1" radius={[4, 4, 0, 0]} barSize={32} />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
+          )}
         </div>
-      )}
-
-      {/* Period Breakdown List */}
-      <div className="space-y-4">
-        <h4 className="font-bold text-slate-800 flex items-center gap-2">
-          <CalendarIcon size={18} className="text-slate-400" />
-          Period Comparison
-        </h4>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {payRecords.map((pay) => {
-            const worked = entries.filter(e => 
-              isWithinInterval(parseLocalISO(e.date), {
-                start: parseLocalISO(pay.startDate),
-                end: parseLocalISO(pay.endDate)
-              })
-            ).reduce((sum, e) => sum + e.workedHours, 0);
-            const diff = worked - pay.hoursPaid;
-
-            return (
-              <div key={pay.id} className="bg-white p-4 rounded-xl border border-slate-100 flex items-center justify-between">
-                <div>
-                  <p className="text-xs font-bold text-slate-400 uppercase tracking-tight">
-                    {format(parseLocalISO(pay.startDate), 'MMM d')} - {format(parseLocalISO(pay.endDate), 'MMM d, yyyy')}
-                  </p>
-                  <div className="flex items-center gap-3 mt-1">
-                    <div className="flex items-center gap-1 text-slate-600 text-sm">
-                      <Clock size={14} /> {worked.toFixed(1)}w
-                    </div>
-                    <div className="text-slate-300">/</div>
-                    <div className="text-slate-500 text-sm">{pay.hoursPaid.toFixed(1)}p</div>
-                  </div>
-                </div>
-                <div className={`text-right ${diff > 0 ? 'text-emerald-600' : diff < 0 ? 'text-rose-600' : 'text-slate-400'}`}>
-                  <p className="text-lg font-bold">{diff > 0 ? '+' : ''}{diff.toFixed(1)}</p>
-                  <p className="text-[10px] font-bold uppercase tracking-wider">TIL Diff</p>
-                </div>
-              </div>
-            );
-          })}
+        
+        <div className="overflow-x-auto">
+          <table className="w-full text-left">
+            <thead className="text-[10px] font-bold text-slate-400 uppercase tracking-wider border-b">
+              <tr>
+                <th className="px-6 py-4">Date</th>
+                <th className="px-6 py-4">Hours</th>
+                <th className="px-6 py-4">Base Rate</th>
+                <th className="px-6 py-4">Actual Rate</th>
+                <th className="px-6 py-4 text-right">Amount</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-50">
+              {entriesInLatestPeriod.length === 0 ? (
+                <tr>
+                  <td colSpan={5} className="px-6 py-8 text-center text-slate-400 text-sm">
+                    No entries recorded for this pay period.
+                  </td>
+                </tr>
+              ) : (
+                entriesInLatestPeriod.map((e) => (
+                  <tr key={e.id} className="text-sm">
+                    <td className="px-6 py-4">
+                      <p className="font-semibold text-slate-700">{format(parseLocalISO(e.date), 'EEE, MMM d')}</p>
+                      <p className="text-[10px] text-slate-400">{e.type}</p>
+                    </td>
+                    <td className="px-6 py-4 text-slate-600">{e.workedHours.toFixed(2)}h</td>
+                    <td className="px-6 py-4 text-slate-500">{formatCurrency(settings.basePayRate)}</td>
+                    <td className="px-6 py-4">
+                       <span className="font-medium text-indigo-600">{formatCurrency(e.hourlyRateAtTime)}</span>
+                       {e.hourlyRateAtTime > settings.basePayRate && (
+                         <span className="ml-1 text-[9px] font-black text-orange-500">{(e.hourlyRateAtTime/settings.basePayRate).toFixed(2)}x</span>
+                       )}
+                    </td>
+                    <td className="px-6 py-4 text-right font-bold text-slate-800">{formatCurrency(e.totalEarned)}</td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+            <tfoot className="bg-slate-50 border-t">
+              <tr>
+                <td colSpan={4} className="px-6 py-3 text-right text-xs font-bold text-slate-500 uppercase">Gross Period Total</td>
+                <td className="px-6 py-3 text-right font-black text-lg text-slate-900">{formatCurrency(grossPay)}</td>
+              </tr>
+              <tr className="border-t">
+                <td colSpan={4} className="px-6 py-3 text-right text-xs font-bold text-slate-500 uppercase">Estimated Tax (AU Foreign Res)</td>
+                <td className="px-6 py-3 text-right font-bold text-rose-500">-{formatCurrency(tax)}</td>
+              </tr>
+              <tr className="border-t bg-indigo-50/50">
+                <td colSpan={4} className="px-6 py-4 text-right text-xs font-black text-indigo-900 uppercase">Net Take-Home Pay</td>
+                <td className="px-6 py-4 text-right font-black text-xl text-indigo-700">{formatCurrency(netPay)}</td>
+              </tr>
+            </tfoot>
+          </table>
         </div>
       </div>
     </div>

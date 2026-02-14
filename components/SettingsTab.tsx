@@ -1,7 +1,7 @@
 
 import React, { useRef } from 'react';
-import { Save, Shield, HelpCircle, RotateCcw, Download, Upload, FileJson } from 'lucide-react';
-import { Settings } from '../types';
+import { Save, Shield, RotateCcw, Download, Upload, FileJson, Users, Banknote } from 'lucide-react';
+import { Settings, EmploymentType } from '../types';
 
 interface Props {
   settings: Settings;
@@ -11,7 +11,7 @@ interface Props {
 const SettingsTab: React.FC<Props> = ({ settings, setSettings }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleChange = (key: keyof Settings, value: string | number) => {
+  const handleChange = (key: keyof Settings, value: any) => {
     setSettings(prev => ({ ...prev, [key]: value }));
   };
 
@@ -22,150 +22,166 @@ const SettingsTab: React.FC<Props> = ({ settings, setSettings }) => {
     }
   };
 
-  const exportData = () => {
-    const data = {
-      entries: JSON.parse(localStorage.getItem('til_entries') || '[]'),
-      payRecords: JSON.parse(localStorage.getItem('til_pay') || '[]'),
-      settings: settings
-    };
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `til-tracker-backup-${new Date().toISOString().split('T')[0]}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
-  };
-
-  const importData = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      try {
-        const json = JSON.parse(e.target?.result as string);
-        if (confirm('This will overwrite your current data with the imported file. Continue?')) {
-          localStorage.setItem('til_entries', JSON.stringify(json.entries || []));
-          localStorage.setItem('til_pay', JSON.stringify(json.payRecords || []));
-          localStorage.setItem('til_settings', JSON.stringify(json.settings || settings));
-          window.location.reload();
-        }
-      } catch (err) {
-        alert('Invalid backup file.');
-      }
-    };
-    reader.readAsText(file);
-  };
-
   return (
-    <div className="max-w-2xl mx-auto space-y-8">
+    <div className="max-w-3xl mx-auto space-y-8 pb-12">
       <div>
-        <h2 className="text-2xl font-bold text-slate-800">Settings</h2>
-        <p className="text-slate-500 text-sm">Configure your work defaults and tracking logic</p>
+        <h2 className="text-2xl font-bold text-slate-800">Configurations</h2>
+        <p className="text-slate-500 text-sm">Customize pay rates, tax logic, and employment rules</p>
       </div>
 
       <div className="bg-white rounded-2xl border shadow-sm divide-y">
+        {/* Employment Type */}
         <div className="p-6">
           <h3 className="text-sm font-bold text-slate-800 mb-4 flex items-center gap-2">
-            <Shield size={16} className="text-indigo-500" /> General Defaults
+            <Users size={16} className="text-indigo-500" /> Employment Profile
+          </h3>
+          <div className="grid grid-cols-2 gap-4">
+             {Object.values(EmploymentType).map(type => (
+               <button
+                key={type}
+                onClick={() => handleChange('employmentType', type)}
+                className={`py-3 rounded-xl border-2 font-bold transition-all ${
+                  settings.employmentType === type 
+                  ? 'border-indigo-600 bg-indigo-50 text-indigo-700' 
+                  : 'border-slate-100 bg-slate-50 text-slate-400 hover:border-slate-200'
+                }`}
+               >
+                 {type}
+               </button>
+             ))}
+          </div>
+          
+          {settings.employmentType === EmploymentType.CASUAL && (
+            <div className="mt-4 p-4 bg-indigo-50 rounded-xl border border-indigo-100">
+              <div className="flex justify-between items-center mb-1">
+                <p className="text-xs font-bold text-indigo-700 uppercase">Casual Loading Multiplier</p>
+                <input 
+                  type="number" step="0.01"
+                  value={settings.casualLoadingMultiplier}
+                  onChange={(e) => handleChange('casualLoadingMultiplier', parseFloat(e.target.value) || 1)}
+                  className="w-16 border rounded bg-white px-2 py-1 text-right text-xs font-bold"
+                />
+              </div>
+              <p className="text-[10px] text-indigo-500 italic">Standard casual loading in Australia is 1.25 (25% extra).</p>
+            </div>
+          )}
+        </div>
+
+        {/* Pay Rates */}
+        <div className="p-6">
+          <h3 className="text-sm font-bold text-slate-800 mb-4 flex items-center gap-2">
+            <Banknote size={16} className="text-emerald-500" /> Pay & Multipliers
           </h3>
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="font-semibold text-slate-700">Standard Daily Hours</p>
-                <p className="text-xs text-slate-400">Hours in a typical work day</p>
+                <p className="font-semibold text-slate-700">Base Hourly Rate</p>
+                <p className="text-xs text-slate-400">Regular weekday rate (before any loading)</p>
               </div>
               <input 
                 type="number" 
-                step="0.1"
-                value={settings.standardDailyHours}
-                onChange={(e) => handleChange('standardDailyHours', parseFloat(e.target.value) || 0)}
-                className="w-20 border rounded-lg px-2 py-1 bg-slate-50 text-right focus:ring-2 focus:ring-indigo-500 outline-none"
+                step="0.01"
+                value={settings.basePayRate}
+                onChange={(e) => handleChange('basePayRate', parseFloat(e.target.value) || 0)}
+                className="w-24 border rounded-lg px-3 py-2 bg-slate-50 text-right font-bold focus:ring-2 focus:ring-emerald-500 outline-none"
               />
             </div>
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="font-semibold text-slate-700">Default Break</p>
-                <p className="text-xs text-slate-400">Minutes deducted from daily work</p>
-              </div>
-              <input 
-                type="number" 
-                value={settings.defaultBreak}
-                onChange={(e) => handleChange('defaultBreak', parseInt(e.target.value) || 0)}
-                className="w-20 border rounded-lg px-2 py-1 bg-slate-50 text-right focus:ring-2 focus:ring-indigo-500 outline-none"
-              />
-            </div>
-          </div>
-        </div>
-
-        <div className="p-6">
-          <h3 className="text-sm font-bold text-slate-800 mb-4 flex items-center gap-2">
-            <Save size={16} className="text-amber-500" /> Holiday Logic
-          </h3>
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="font-semibold text-slate-700">Public Holiday Credits</p>
-                <p className="text-xs text-slate-400">Hours automatically added for holidays</p>
-              </div>
-              <input 
-                type="number" 
-                step="0.1"
-                value={settings.publicHolidayHours}
-                onChange={(e) => handleChange('publicHolidayHours', parseFloat(e.target.value) || 0)}
-                className="w-20 border rounded-lg px-2 py-1 bg-slate-50 text-right focus:ring-2 focus:ring-indigo-500 outline-none"
-              />
+            
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-4 border-t border-slate-50">
+               <div className="space-y-1">
+                 <label className="text-[10px] font-black text-slate-400 uppercase">Saturday Mult.</label>
+                 <input 
+                  type="number" step="0.05"
+                  value={settings.multiplierSaturday}
+                  onChange={(e) => handleChange('multiplierSaturday', parseFloat(e.target.value) || 1)}
+                  className="w-full border rounded-lg px-3 py-2 bg-slate-50 focus:ring-2 focus:ring-indigo-500"
+                 />
+               </div>
+               <div className="space-y-1">
+                 <label className="text-[10px] font-black text-slate-400 uppercase">Sunday Mult.</label>
+                 <input 
+                  type="number" step="0.05"
+                  value={settings.multiplierSunday}
+                  onChange={(e) => handleChange('multiplierSunday', parseFloat(e.target.value) || 1)}
+                  className="w-full border rounded-lg px-3 py-2 bg-slate-50 focus:ring-2 focus:ring-indigo-500"
+                 />
+               </div>
+               <div className="space-y-1">
+                 <label className="text-[10px] font-black text-slate-400 uppercase">Public Hol. Mult.</label>
+                 <input 
+                  type="number" step="0.05"
+                  value={settings.multiplierPublicHoliday}
+                  onChange={(e) => handleChange('multiplierPublicHoliday', parseFloat(e.target.value) || 1)}
+                  className="w-full border rounded-lg px-3 py-2 bg-slate-50 focus:ring-2 focus:ring-indigo-500"
+                 />
+               </div>
             </div>
           </div>
         </div>
 
+        {/* Data Portability */}
         <div className="p-6">
           <h3 className="text-sm font-bold text-slate-800 mb-4 flex items-center gap-2">
-            <FileJson size={16} className="text-blue-500" /> Data Portability
+            <FileJson size={16} className="text-blue-500" /> Data Management
           </h3>
           <div className="flex gap-4">
             <button 
-              onClick={exportData}
-              className="flex-1 flex items-center justify-center gap-2 bg-slate-50 hover:bg-slate-100 border text-slate-700 px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+              onClick={() => {
+                const data = {
+                  entries: JSON.parse(localStorage.getItem('til_entries') || '[]'),
+                  payRecords: JSON.parse(localStorage.getItem('til_pay') || '[]'),
+                  settings: settings
+                };
+                const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `til-backup-${new Date().toISOString().split('T')[0]}.json`;
+                a.click();
+              }}
+              className="flex-1 flex items-center justify-center gap-2 bg-slate-50 hover:bg-slate-100 border text-slate-700 px-4 py-3 rounded-lg text-sm font-bold transition-colors"
             >
-              <Download size={16} /> Export JSON
+              <Download size={16} /> Export
             </button>
             <button 
               onClick={() => fileInputRef.current?.click()}
-              className="flex-1 flex items-center justify-center gap-2 bg-slate-50 hover:bg-slate-100 border text-slate-700 px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+              className="flex-1 flex items-center justify-center gap-2 bg-slate-50 hover:bg-slate-100 border text-slate-700 px-4 py-3 rounded-lg text-sm font-bold transition-colors"
             >
-              <Upload size={16} /> Import Backup
+              <Upload size={16} /> Import
             </button>
             <input 
               type="file" 
               ref={fileInputRef} 
-              onChange={importData} 
               className="hidden" 
-              accept=".json"
+              accept=".json" 
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = (re) => {
+                  try {
+                    const json = JSON.parse(re.target?.result as string);
+                    if (confirm('Overwrite existing data?')) {
+                      localStorage.setItem('til_entries', JSON.stringify(json.entries));
+                      localStorage.setItem('til_pay', JSON.stringify(json.payRecords));
+                      localStorage.setItem('til_settings', JSON.stringify(json.settings));
+                      window.location.reload();
+                    }
+                  } catch (err) { alert('Invalid file'); }
+                };
+                reader.readAsText(file);
+              }}
             />
           </div>
         </div>
       </div>
 
-      <div className="bg-rose-50 p-6 rounded-2xl border border-rose-100 space-y-4">
-        <h3 className="text-sm font-bold text-rose-800 flex items-center gap-2">
-          <RotateCcw size={16} /> Danger Zone
+      <div className="bg-rose-50 p-6 rounded-2xl border border-rose-100">
+        <h3 className="text-sm font-bold text-rose-800 flex items-center gap-2 mb-2">
+          <RotateCcw size={16} /> Reset Everything
         </h3>
-        <p className="text-sm text-rose-600">
-          Resetting the app will remove all your hard work! Make sure you don't need the data anymore.
-        </p>
-        <button 
-          onClick={resetAll}
-          className="bg-rose-600 hover:bg-rose-700 text-white px-4 py-2 rounded-lg text-sm font-bold transition-colors"
-        >
-          Reset All Data
-        </button>
-      </div>
-
-      <div className="text-center pb-12">
-        <p className="text-xs text-slate-400">TIL Tracker Pro v1.1.0</p>
-        <p className="text-xs text-slate-300 mt-1">Your data is stored locally in your browser.</p>
+        <p className="text-sm text-rose-600 mb-4">Clears all timesheets, pay records, and custom settings.</p>
+        <button onClick={resetAll} className="bg-rose-600 hover:bg-rose-700 text-white px-6 py-2 rounded-lg font-bold">Wipe Data</button>
       </div>
     </div>
   );

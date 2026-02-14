@@ -1,0 +1,5 @@
+{
+  "name": "Timesheet_Tracker",
+  "description": "A personal timesheet and Time In Lieu (TIL) monitor to track work hours against paid cycles, with automatic public holiday handling and fortnight grouping.",
+  "requestFramePermissions": []
+}

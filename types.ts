@@ -45,4 +45,4 @@ export interface Settings {
   fortnightAnchorDate: string;
 }
 
-export type TabType = 'timesheet' | 'payroll' | 'settings';
+export type TabType = 'summary' | 'timesheet' | 'payroll' | 'settings';

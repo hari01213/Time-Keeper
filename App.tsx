@@ -4,12 +4,15 @@ import {
   Calendar, 
   Wallet, 
   Settings as SettingsIcon, 
-  Clock
+  Clock,
+  LayoutGrid,
+  BarChart3
 } from 'lucide-react';
 import { TimesheetEntry, PayRecord, Settings, TabType, EmploymentType } from './types';
 import TimesheetTab from './components/TimesheetTab';
 import PayrollTab from './components/PayrollTab';
 import SettingsTab from './components/SettingsTab';
+import SummaryTab from './components/SummaryTab';
 
 const DEFAULT_SETTINGS: Settings = {
   employmentType: EmploymentType.REGULAR,
@@ -25,7 +28,7 @@ const DEFAULT_SETTINGS: Settings = {
 };
 
 const App: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<TabType>('timesheet');
+  const [activeTab, setActiveTab] = useState<TabType>('summary');
   const [entries, setEntries] = useState<TimesheetEntry[]>([]);
   const [payRecords, setPayRecords] = useState<PayRecord[]>([]);
   const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS);
@@ -60,6 +63,8 @@ const App: React.FC = () => {
 
   const renderTab = () => {
     switch (activeTab) {
+      case 'summary':
+        return <SummaryTab entries={entries} payRecords={payRecords} settings={settings} currentTIL={currentTIL} />;
       case 'timesheet':
         return <TimesheetTab entries={entries} setEntries={setEntries} settings={settings} />;
       case 'payroll':
@@ -80,7 +85,7 @@ const App: React.FC = () => {
         </div>
       </header>
 
-      <main className="flex-1 w-full max-w-5xl mx-auto p-4 md:p-10">
+      <main className="flex-1 w-full max-w-6xl mx-auto p-4 md:p-10">
         {renderTab()}
       </main>
 
@@ -88,9 +93,10 @@ const App: React.FC = () => {
         <div className="hidden md:flex flex-col items-center py-8 border-b border-slate-50 mb-4">
           <Clock className="w-8 h-8 text-indigo-600" />
         </div>
-        <NavItem active={activeTab === 'timesheet'} onClick={() => setActiveTab('timesheet')} icon={<Calendar size={24} />} label="Logs" />
+        <NavItem active={activeTab === 'timesheet'} onClick={() => setActiveTab('timesheet')} icon={<Calendar size={24} />} label="Entries" />
         <NavItem active={activeTab === 'payroll'} onClick={() => setActiveTab('payroll')} icon={<Wallet size={24} />} label="Payroll" />
-        <NavItem active={activeTab === 'settings'} onClick={() => setActiveTab('settings')} icon={<SettingsIcon size={24} />} label="Config" />
+        <NavItem active={activeTab === 'summary'} onClick={() => setActiveTab('summary')} icon={<BarChart3 size={24} />} label="Summary" />
+        <NavItem active={activeTab === 'settings'} onClick={() => setActiveTab('settings')} icon={<SettingsIcon size={24} />} label="Settings" />
       </nav>
     </div>
   );
@@ -101,7 +107,7 @@ const NavItem: React.FC<{ active: boolean; icon: React.ReactNode; label: string;
     active ? 'text-indigo-600 bg-indigo-50/30' : 'text-slate-400 hover:text-indigo-400'
   }`}>
     {icon}
-    <span className="text-[10px] mt-1 font-bold uppercase tracking-widest">{label}</span>
+    <span className="text-[10px] mt-1 font-bold tracking-tight">{label}</span>
     {active && <div className="hidden md:block absolute right-0 w-1 h-12 bg-indigo-600 rounded-l-full" />}
     {active && <div className="md:hidden absolute top-0 w-full h-1 bg-indigo-600" />}
   </button>

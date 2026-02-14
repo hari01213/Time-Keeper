@@ -1,9 +1,9 @@
 
 import React from 'react';
-import { TrendingUp, TrendingDown, Info, Calendar as CalendarIcon, DollarSign, ReceiptText } from 'lucide-react';
-import { format, isWithinInterval } from 'date-fns';
-import { TimesheetEntry, PayRecord, Settings, EmploymentType } from '../types';
-import { formatDecimalHours, parseLocalISO, formatCurrency, calculateTax } from '../utils/helpers';
+// Added BarChart3 to the imports
+import { TrendingUp, TrendingDown, Info, Calendar as CalendarIcon, DollarSign, Clock, ArrowUpRight, BarChart3 } from 'lucide-react';
+import { TimesheetEntry, PayRecord, Settings } from '../types';
+import { formatDecimalHours, formatCurrency } from '../utils/helpers';
 
 interface Props {
   entries: TimesheetEntry[];
@@ -13,152 +13,73 @@ interface Props {
 }
 
 const SummaryTab: React.FC<Props> = ({ entries, payRecords, settings, currentTIL }) => {
-  const latestPay = payRecords[0];
-  
-  const entriesInLatestPeriod = latestPay ? entries.filter(e => 
-    isWithinInterval(parseLocalISO(e.date), {
-      start: parseLocalISO(latestPay.startDate),
-      end: parseLocalISO(latestPay.endDate)
-    })
-  ) : [];
-
-  const grossPay = entriesInLatestPeriod.reduce((sum, e) => sum + e.totalEarned, 0);
-  const totalHoursWorked = entriesInLatestPeriod.reduce((sum, e) => sum + e.workedHours, 0);
-  const tax = calculateTax(grossPay);
-  const netPay = grossPay - tax;
+  const totalWorkedHrs = entries.reduce((s, e) => s + e.workedHours, 0);
+  const totalPaidHrs = payRecords.reduce((s, p) => s + p.hoursPaid, 0);
 
   return (
-    <div className="space-y-8 pb-12">
-      {/* Financial Overview Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 md:col-span-2">
-          <div className="flex justify-between items-start mb-6">
+    <div className="space-y-10 animate-in fade-in duration-500">
+      <div className="flex flex-col md:flex-row gap-6">
+        {/* Main Balance Card */}
+        <div className="flex-1 bg-white p-10 rounded-[2.5rem] shadow-sm border border-slate-100 relative overflow-hidden">
+          <div className="flex justify-between items-start mb-10">
             <div>
-              <p className="text-slate-500 text-sm font-medium">Estimated Net Pay (Current Period)</p>
-              <h3 className="text-4xl font-black text-slate-900 mt-1">
-                {formatCurrency(netPay)}
-              </h3>
-              <p className="text-slate-400 text-xs mt-1">
-                Based on {totalHoursWorked.toFixed(1)} hours logged
-              </p>
+              <p className="text-slate-500 font-semibold text-sm tracking-tight mb-2">Time In Lieu Balance</p>
+              <h2 className={`text-6xl font-black tracking-tighter flex items-baseline gap-3 ${currentTIL >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
+                {currentTIL >= 0 ? '+' : ''}{currentTIL.toFixed(2)}
+                <span className="text-2xl font-black uppercase text-slate-900 tracking-widest">Hours</span>
+              </h2>
             </div>
-            <div className="p-3 bg-emerald-50 text-emerald-600 rounded-xl">
-              <DollarSign size={28} />
+            <div className={`p-4 rounded-2xl ${currentTIL >= 0 ? 'bg-emerald-50 text-emerald-500' : 'bg-rose-50 text-rose-500'}`}>
+              {currentTIL >= 0 ? <TrendingUp size={32} /> : <TrendingDown size={32} />}
             </div>
           </div>
-          
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-            <div className="bg-slate-50 p-3 rounded-xl">
-              <p className="text-slate-400 text-[9px] font-bold uppercase tracking-wider">Gross</p>
-              <p className="text-sm font-bold text-slate-700">{formatCurrency(grossPay)}</p>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="bg-slate-50/50 p-6 rounded-3xl border border-slate-100/50">
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Total Worked</p>
+              <p className="text-2xl font-bold text-slate-800 tracking-tight">{formatDecimalHours(totalWorkedHrs)}</p>
             </div>
-            <div className="bg-slate-50 p-3 rounded-xl">
-              <p className="text-slate-400 text-[9px] font-bold uppercase tracking-wider">Tax (Est)</p>
-              <p className="text-sm font-bold text-rose-500">-{formatCurrency(tax)}</p>
-            </div>
-            <div className="bg-slate-50 p-3 rounded-xl">
-              <p className="text-slate-400 text-[9px] font-bold uppercase tracking-wider">TIL Balance</p>
-              <p className={`text-sm font-bold ${currentTIL >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
-                {currentTIL.toFixed(1)}h
-              </p>
-            </div>
-            <div className="bg-slate-50 p-3 rounded-xl">
-              <p className="text-slate-400 text-[9px] font-bold uppercase tracking-wider">Emp Type</p>
-              <p className="text-sm font-bold text-indigo-600">{settings.employmentType}</p>
+            <div className="bg-slate-50/50 p-6 rounded-3xl border border-slate-100/50">
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Total Paid</p>
+              <p className="text-2xl font-bold text-slate-800 tracking-tight">{formatDecimalHours(totalPaidHrs)}</p>
             </div>
           </div>
         </div>
 
-        <div className="bg-indigo-600 p-6 rounded-2xl shadow-lg text-white">
-          <div className="flex items-center gap-2 mb-4 opacity-80">
-            <Info size={16} />
-            <p className="text-xs font-bold uppercase">TIL Status</p>
+        {/* Quick Tip Card */}
+        <div className="w-full md:w-[380px] bg-indigo-600 p-10 rounded-[2.5rem] shadow-xl text-white relative flex flex-col justify-between">
+          <div>
+            <div className="flex items-center gap-2 mb-6 text-white/70">
+              <Info size={18} />
+              <p className="text-[11px] font-black uppercase tracking-widest">Quick Tip</p>
+            </div>
+            <p className="text-lg font-medium leading-snug mb-8">
+              {currentTIL >= 0 
+                ? `You have extra hours compared to your pay checks. That's almost ${Math.max(0, (currentTIL / settings.standardDailyHours)).toFixed(1)} full days of leave available!`
+                : `You've been paid for more hours than you've logged. You are currently ${Math.abs(currentTIL).toFixed(1)} hours in deficit.`
+              }
+            </p>
           </div>
-          <p className="text-sm leading-relaxed mb-4">
-            {currentTIL >= 0 
-              ? `You've banked ${currentTIL.toFixed(1)} hours of TIL. That's worth approximately ${formatCurrency(currentTIL * settings.basePayRate)}!`
-              : `You are behind by ${Math.abs(currentTIL).toFixed(1)} hours based on your paid cycles.`
-            }
-          </p>
-          <div className="flex items-center gap-2 mt-auto">
-             <div className={`p-2 rounded-lg bg-white/20`}>
-                {currentTIL >= 0 ? <TrendingUp size={20}/> : <TrendingDown size={20}/>}
-             </div>
-             <span className="text-xs font-bold uppercase tracking-widest">
-                {currentTIL >= 0 ? 'Surplus' : 'Deficit'}
-             </span>
+          
+          <div className="w-full h-1.5 bg-white/10 rounded-full overflow-hidden">
+             <div 
+              className="h-full bg-white transition-all duration-1000" 
+              style={{ width: currentTIL > 0 ? `${Math.min(100, (currentTIL/40)*100)}%` : '0%' }}
+             />
           </div>
         </div>
       </div>
 
-      {/* Payslip Report */}
-      <div className="bg-white rounded-2xl border shadow-sm overflow-hidden">
-        <div className="p-6 border-b bg-slate-50 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-             <ReceiptText className="text-indigo-600" />
-             <h4 className="font-bold text-slate-800 uppercase tracking-tight">Period Earnings Report</h4>
-          </div>
-          {latestPay && (
-            <div className="text-right">
-              <p className="text-xs font-bold text-slate-400">CURRENT PERIOD</p>
-              <p className="text-xs font-medium text-slate-600">{format(parseLocalISO(latestPay.startDate), 'MMM d')} - {format(parseLocalISO(latestPay.endDate), 'MMM d, yyyy')}</p>
-            </div>
-          )}
+      {/* Placeholder for future detailed comparison */}
+      <div className="pt-4">
+        <div className="flex items-center gap-3 mb-8">
+          <CalendarIcon size={24} className="text-slate-400" />
+          <h3 className="text-xl font-black text-slate-900 tracking-tight">Period Comparison</h3>
         </div>
         
-        <div className="overflow-x-auto">
-          <table className="w-full text-left">
-            <thead className="text-[10px] font-bold text-slate-400 uppercase tracking-wider border-b">
-              <tr>
-                <th className="px-6 py-4">Date</th>
-                <th className="px-6 py-4">Hours</th>
-                <th className="px-6 py-4">Base Rate</th>
-                <th className="px-6 py-4">Actual Rate</th>
-                <th className="px-6 py-4 text-right">Amount</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-50">
-              {entriesInLatestPeriod.length === 0 ? (
-                <tr>
-                  <td colSpan={5} className="px-6 py-8 text-center text-slate-400 text-sm">
-                    No entries recorded for this pay period.
-                  </td>
-                </tr>
-              ) : (
-                entriesInLatestPeriod.map((e) => (
-                  <tr key={e.id} className="text-sm">
-                    <td className="px-6 py-4">
-                      <p className="font-semibold text-slate-700">{format(parseLocalISO(e.date), 'EEE, MMM d')}</p>
-                      <p className="text-[10px] text-slate-400">{e.type}</p>
-                    </td>
-                    <td className="px-6 py-4 text-slate-600">{e.workedHours.toFixed(2)}h</td>
-                    <td className="px-6 py-4 text-slate-500">{formatCurrency(settings.basePayRate)}</td>
-                    <td className="px-6 py-4">
-                       <span className="font-medium text-indigo-600">{formatCurrency(e.hourlyRateAtTime)}</span>
-                       {e.hourlyRateAtTime > settings.basePayRate && (
-                         <span className="ml-1 text-[9px] font-black text-orange-500">{(e.hourlyRateAtTime/settings.basePayRate).toFixed(2)}x</span>
-                       )}
-                    </td>
-                    <td className="px-6 py-4 text-right font-bold text-slate-800">{formatCurrency(e.totalEarned)}</td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-            <tfoot className="bg-slate-50 border-t">
-              <tr>
-                <td colSpan={4} className="px-6 py-3 text-right text-xs font-bold text-slate-500 uppercase">Gross Period Total</td>
-                <td className="px-6 py-3 text-right font-black text-lg text-slate-900">{formatCurrency(grossPay)}</td>
-              </tr>
-              <tr className="border-t">
-                <td colSpan={4} className="px-6 py-3 text-right text-xs font-bold text-slate-500 uppercase">Estimated Tax (AU Foreign Res)</td>
-                <td className="px-6 py-3 text-right font-bold text-rose-500">-{formatCurrency(tax)}</td>
-              </tr>
-              <tr className="border-t bg-indigo-50/50">
-                <td colSpan={4} className="px-6 py-4 text-right text-xs font-black text-indigo-900 uppercase">Net Take-Home Pay</td>
-                <td className="px-6 py-4 text-right font-black text-xl text-indigo-700">{formatCurrency(netPay)}</td>
-              </tr>
-            </tfoot>
-          </table>
+        <div className="bg-white border-2 border-dashed border-slate-100 rounded-[2.5rem] py-20 flex flex-col items-center justify-center text-slate-300">
+           <BarChart3 size={48} className="mb-4 opacity-20" />
+           <p className="font-bold">Comparative data will appear here as you log more periods</p>
         </div>
       </div>
     </div>

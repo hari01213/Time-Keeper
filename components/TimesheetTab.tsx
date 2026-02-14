@@ -295,7 +295,7 @@ const TimesheetTab: React.FC<Props> = ({ entries, setEntries, settings }) => {
 
       <div className="bg-white rounded-[2rem] shadow-sm border border-slate-100 overflow-hidden">
         <table className="w-full text-left border-collapse">
-          <thead className="bg-slate-50/50 text-slate-400 text-[11px] font-black uppercase tracking-widest border-b border-slate-100">
+          <thead className="bg-slate-50/50 text-slate-400 text-[11px] font-bold uppercase tracking-widest border-b border-slate-100">
             <tr>
               <th className="px-8 py-7">Date</th>
               <th className="px-8 py-7">Times</th>
@@ -311,7 +311,7 @@ const TimesheetTab: React.FC<Props> = ({ entries, setEntries, settings }) => {
                 <td colSpan={6} className="px-8 py-24 text-center text-slate-300">
                   <div className="flex flex-col items-center">
                     <Clock className="w-20 h-20 mb-6 opacity-10" />
-                    <p className="font-black text-lg">No entries logged yet</p>
+                    <p className="font-bold text-lg">No entries logged yet</p>
                     <p className="text-sm font-medium mt-1">Your work history will appear here</p>
                   </div>
                 </td>
@@ -325,16 +325,16 @@ const TimesheetTab: React.FC<Props> = ({ entries, setEntries, settings }) => {
                 return (
                   <tr key={entry.id} className="hover:bg-slate-50/40 transition-colors group">
                     <td className="px-8 py-7">
-                      <p className="text-xl font-black text-slate-900 leading-none mb-1">{dayLabel},</p>
-                      <p className="text-xl font-black text-slate-900 leading-none">{dateLabel}</p>
+                      <p className="text-lg text-slate-900 leading-none mb-1">{dayLabel},</p>
+                      <p className="text-lg text-slate-900 leading-none font-medium">{dateLabel}</p>
                     </td>
                     <td className="px-8 py-7">
-                      <p className="text-slate-700 font-bold text-lg leading-tight">{entry.startTime} –</p>
-                      <p className="text-slate-700 font-bold text-lg leading-tight">{entry.endTime}</p>
-                      <p className="text-[10px] text-slate-400 font-black uppercase mt-1.5 tracking-wider">Break: {entry.breakMinutes}m</p>
+                      <p className="text-slate-600 text-base leading-tight">{entry.startTime} –</p>
+                      <p className="text-slate-600 text-base leading-tight">{entry.endTime}</p>
+                      <p className="text-[10px] text-slate-400 font-medium uppercase mt-1.5 tracking-wider">Break: {entry.breakMinutes}m</p>
                     </td>
                     <td className="px-8 py-7">
-                      <p className="text-2xl font-black text-slate-800 tracking-tighter">
+                      <p className="text-xl text-slate-800 tracking-tight">
                         {Math.floor(entry.workedHours)}h {Math.round((entry.workedHours % 1) * 60)}m
                       </p>
                       <span className={`inline-block px-2 py-0.5 rounded text-[9px] font-black uppercase mt-1 ${
@@ -346,28 +346,28 @@ const TimesheetTab: React.FC<Props> = ({ entries, setEntries, settings }) => {
                     </td>
                     <td className="px-8 py-7">
                       <div className="flex flex-col">
-                        <p className="text-xl font-black text-slate-900 leading-none mb-1">
+                        <p className="text-lg text-slate-900 leading-none mb-1">
                           {formatCurrency(entry.hourlyRateAtTime)}
-                          <span className="text-sm font-bold text-slate-400">/hr</span>
+                          <span className="text-sm font-normal text-slate-400 ml-1">/hr</span>
                         </p>
-                        <p className="text-[11px] font-medium text-slate-400">
-                          Base: {formatCurrency(settings.basePayRate)} × {totalMultiplier.toFixed(2)}
+                        <p className="text-[10px] font-medium text-slate-400">
+                          Base × {totalMultiplier.toFixed(2)}
                         </p>
                       </div>
                     </td>
                     <td className="px-8 py-7">
-                      <p className="text-3xl font-black text-indigo-600 tracking-tighter">{formatCurrency(entry.totalEarned)}</p>
+                      <p className="text-2xl font-bold text-slate-900 tracking-tight">{formatCurrency(entry.totalEarned)}</p>
                     </td>
                     <td className="px-8 py-7 text-right">
                       <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                         <button onClick={() => handleEdit(entry)} className="p-3 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-2xl transition-all" title="Edit Log">
-                          <Edit3 size={20} />
+                          <Edit3 size={18} />
                         </button>
                         <button onClick={() => startCopySession(entry)} className="p-3 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-2xl transition-all" title="Copy to other days">
-                          <Copy size={20} />
+                          <Copy size={18} />
                         </button>
                         <button onClick={() => deleteEntry(entry.id)} className="p-3 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-2xl transition-all" title="Delete Log">
-                          <Trash2 size={20} />
+                          <Trash2 size={18} />
                         </button>
                       </div>
                     </td>
